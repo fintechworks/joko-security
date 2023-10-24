@@ -1,25 +1,23 @@
 package io.github.jokoframework.security.springex;
 
-import java.io.IOException;
-import java.util.Collection;
-
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.filter.GenericFilterBean;
-
 import io.github.jokoframework.common.JokoUtils;
 import io.github.jokoframework.security.JokoJWTClaims;
 import io.github.jokoframework.security.api.JokoAuthorizationManager;
 import io.github.jokoframework.security.controller.SecurityConstants;
 import io.github.jokoframework.security.services.ITokenService;
 import io.jsonwebtoken.JwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.filter.GenericFilterBean;
+
+import java.io.IOException;
+import java.util.Collection;
 
 /**
  * Comprueba los requests hechos en busca del token de autenticación. El token

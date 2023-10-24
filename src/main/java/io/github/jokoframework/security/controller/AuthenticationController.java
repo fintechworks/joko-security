@@ -1,11 +1,24 @@
 package io.github.jokoframework.security.controller;
 
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.validation.Valid;
-
+import io.github.jokoframework.common.dto.JokoBaseResponse;
 import io.github.jokoframework.common.errors.JokoApplicationException;
+import io.github.jokoframework.security.ApiPaths;
+import io.github.jokoframework.security.JokoJWTExtension.TOKEN_TYPE;
+import io.github.jokoframework.security.JokoTokenWrapper;
+import io.github.jokoframework.security.api.JokoAuthentication;
+import io.github.jokoframework.security.api.JokoAuthenticationManager;
+import io.github.jokoframework.security.dto.JokoTokenResponse;
+import io.github.jokoframework.security.dto.request.AuthenticationRequest;
+import io.github.jokoframework.security.services.ITokenService;
+import io.github.jokoframework.security.springex.AuthenticationSpringWrapper;
+import io.github.jokoframework.security.springex.JokoSecurityContext;
+import io.github.jokoframework.security.util.JokoRequestContext;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,23 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
-
-import io.github.jokoframework.common.dto.JokoBaseResponse;
-import io.github.jokoframework.security.ApiPaths;
-import io.github.jokoframework.security.JokoJWTExtension.TOKEN_TYPE;
-import io.github.jokoframework.security.JokoTokenWrapper;
-import io.github.jokoframework.security.api.JokoAuthentication;
-import io.github.jokoframework.security.api.JokoAuthenticationManager;
-import io.github.jokoframework.security.dto.request.AuthenticationRequest;
-import io.github.jokoframework.security.dto.JokoTokenResponse;
-import io.github.jokoframework.security.services.ITokenService;
-import io.github.jokoframework.security.springex.AuthenticationSpringWrapper;
-import io.github.jokoframework.security.springex.JokoSecurityContext;
-import io.github.jokoframework.security.util.JokoRequestContext;
+import java.util.List;
 
 @RestController
 public class AuthenticationController {

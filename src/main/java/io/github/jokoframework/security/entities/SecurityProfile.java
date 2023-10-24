@@ -1,5 +1,6 @@
 package io.github.jokoframework.security.entities;
 
+import jakarta.persistence.*;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -7,14 +8,6 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.io.Serializable;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
 
 /**
  *
@@ -26,7 +19,6 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "security_profile",schema = "joko_security")
-
 public class SecurityProfile implements Serializable {
 	// Solo existe esta variable para poner referencias externas en mensajes de
 	// log

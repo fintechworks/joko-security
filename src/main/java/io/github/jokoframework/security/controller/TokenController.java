@@ -1,7 +1,7 @@
 package io.github.jokoframework.security.controller;
 
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import io.swagger.annotations.*;
 import org.springframework.beans.factory.annotation.Autowired;

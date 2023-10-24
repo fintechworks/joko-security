@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 import io.github.jokoframework.security.util.TwoFactorAuthUtil;
 import io.github.jokoframework.security.entities.SeedEntity;
