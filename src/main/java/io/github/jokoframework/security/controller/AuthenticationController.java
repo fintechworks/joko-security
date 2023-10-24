@@ -13,10 +13,11 @@ import io.github.jokoframework.security.services.ITokenService;
 import io.github.jokoframework.security.springex.AuthenticationSpringWrapper;
 import io.github.jokoframework.security.springex.JokoSecurityContext;
 import io.github.jokoframework.security.util.JokoRequestContext;
-import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
-import io.swagger.annotations.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -30,9 +31,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -51,13 +51,14 @@ public class AuthenticationController {
     @Autowired
     private ITokenService tokenService;
 
-    @ApiOperation(value = "Realiza el login de un usuario", notes = "La operación devuelve los datos del usuario y el refresh token que debe ser utilizado. ", position = 1)
-    @ApiResponses(value = { @ApiResponse(code = 202, message = "El usuario se ha logueado exitosamente."),
-            @ApiResponse(code = 401, message = "El usuario introdujo una credencial inválida.") })
-    @ApiImplicitParam(name = SecurityConstants.VERSION_HEADER_NAME, dataType = "String", paramType = "header", required = false, value = "Version", defaultValue = "1.0")
-    @RequestMapping(value = ApiPaths.LOGIN, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Realiza el login de un usuario",
+            description = "La operación devuelve los datos del usuario y el refresh token que debe ser utilizado. ")
+    @ApiResponse(responseCode = "202", description = "El usuario se ha logueado exitosamente.")
+    @ApiResponse(responseCode = "401", description = "El usuario introdujo una credencial inválida.")
+    @Parameter(name = SecurityConstants.VERSION_HEADER_NAME, schema = @Schema(implementation = String.class, defaultValue = "1.0"), in = ParameterIn.HEADER, required = false, description = "Version")
+    @PostMapping(value = ApiPaths.LOGIN, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JokoTokenResponse> login(@RequestBody @Valid AuthenticationRequest loginRequest,
-            HttpServletRequest httpRequest) throws JokoApplicationException {
+                                                   HttpServletRequest httpRequest) throws JokoApplicationException {
 
         LOGGER.trace("Authenticating request for " + loginRequest.getUsername());
 
@@ -75,32 +76,24 @@ public class AuthenticationController {
         }
 
         if (authenticate != null && authenticate.isAuthenticated()) {
-            return processLoginSucessfull(httpRequest, jokoRequest, authenticate, loginRequest.getSeed());
+            return processLoginSuccessful(httpRequest, jokoRequest, authenticate, loginRequest.getSeed());
         }
 
-        if(authenticationManager != null ) {
+        if (authenticationManager != null) {
             // Si no excepciono y tampoco se indico como login exitoso entonces se
             // utiliza el default
-            LOGGER.warn("The AuthenticationManager " + authenticationManager.getClass().getCanonicalName()
-                    + " didn't specify the cause of the unauhtentication");
+            LOGGER.warn("The AuthenticationManager {}  didn't specify the cause of the unauthenticated", authenticationManager.getClass().getCanonicalName());
         }
 
-        return new ResponseEntity<>(new JokoTokenResponse(SecurityConstants.ERROR_BAD_CREDENTIALS),
-                HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(new JokoTokenResponse(SecurityConstants.ERROR_BAD_CREDENTIALS), HttpStatus.UNAUTHORIZED);
 
     }
 
     /**
-     * 
      * En caso que haya sido un login exitoso
-     * 
-     * @param httpRequest
-     * @param jokoRequest
-     * @param authenticate
-     * @return
      */
-    private ResponseEntity<JokoTokenResponse> processLoginSucessfull(HttpServletRequest httpRequest,
-            JokoRequestContext jokoRequest, Authentication authenticate, String seed) {
+    private ResponseEntity<JokoTokenResponse> processLoginSuccessful(HttpServletRequest httpRequest,
+                                                                     JokoRequestContext jokoRequest, Authentication authenticate, String seed) {
         String securityProfile = null;
         List<String> roles = null;
         if (authenticate instanceof JokoAuthentication) {
@@ -123,10 +116,6 @@ public class AuthenticationController {
     /**
      * En caso de que el AuthenticationManager haya respetado el contrato y
      * lanzado una excepcion
-     * 
-     * @param e
-     * @return
-     * @throws Exception
      */
     private ResponseEntity<JokoTokenResponse> processUnauthenticated(Exception e) throws JokoApplicationException {
         String errorCode;
@@ -144,11 +133,11 @@ public class AuthenticationController {
         return new ResponseEntity<>(new JokoTokenResponse(errorCode), HttpStatus.UNAUTHORIZED);
     }
 
-    @ApiOperation(value = "Realiza un logout del usuario", notes = "Este metodo revoca el token (si es aún válido) que está siendo utilizado", position = 3)
-    @ApiResponses(value = { @ApiResponse(code = 200, message = "El token se ha eliminado exitosamente."),
-            @ApiResponse(code = 409, message = "En caso de proveerse un parámetro inválido") })
-    @ApiImplicitParam(name = SecurityConstants.AUTH_HEADER_NAME, dataType = "String", paramType = "header", required = true, value = "Refresh Token")
-    @RequestMapping(value = ApiPaths.LOGOUT, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Realiza un logout del usuario", description = "Este metodo revoca el token (si es aún válido) que está siendo utilizado")
+    @ApiResponse(responseCode = "200", description = "El token se ha eliminado exitosamente.")
+    @ApiResponse(responseCode = "409", description = "En caso de proveerse un parámetro inválido")
+    @Parameter(name = SecurityConstants.AUTH_HEADER_NAME, schema = @Schema(implementation = String.class, defaultValue = "Refresh Token"), in = ParameterIn.HEADER, required = true)
+    @PostMapping(value = ApiPaths.LOGOUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<JokoBaseResponse> logout() {
 
         tokenService.revokeToken(JokoSecurityContext.getClaims().getId());

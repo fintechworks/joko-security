@@ -1,5 +1,6 @@
 package io.github.jokoframework.security.springex;
 
+import ch.qos.logback.core.spi.LogbackLock;
 import io.github.jokoframework.security.ApiPaths;
 import io.github.jokoframework.security.api.JokoAuthorizationManager;
 import io.github.jokoframework.security.controller.SecurityConstants;
