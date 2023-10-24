@@ -5,18 +5,13 @@ import io.jsonwebtoken.impl.DefaultClaims;
 
 import java.io.Serializable;
 
-public class JokoJWTClaims extends DefaultClaims implements Serializable{
+public class JokoJWTClaims extends DefaultClaims implements Serializable {
 
     private static final long serialVersionUID = -8574310592676951264L;
     private JokoJWTExtension joko;
-	
+
     public JokoJWTClaims(Claims claims, JokoJWTExtension joko) {
-        this.setAudience(claims.getAudience());
-        this.setId(claims.getId());
-        this.setIssuedAt(claims.getIssuedAt());
-        this.setIssuer(claims.getIssuer());
-        this.setSubject(claims.getSubject());
-        this.setExpiration(claims.getExpiration());
+        super(claims);
         this.joko = joko;
     }
 
@@ -24,11 +19,11 @@ public class JokoJWTClaims extends DefaultClaims implements Serializable{
 
     }
 
-	public JokoJWTClaims(Claims body) {
-		this(body, null);
-	}
+    public JokoJWTClaims(Claims body) {
+        this(body, null);
+    }
 
-	public JokoJWTExtension getJoko() {
+    public JokoJWTExtension getJoko() {
         return joko;
     }
 

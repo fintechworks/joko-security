@@ -1,6 +1,5 @@
 package io.github.jokoframework.security.springex;
 
-import ch.qos.logback.core.spi.LogbackLock;
 import io.github.jokoframework.security.ApiPaths;
 import io.github.jokoframework.security.api.JokoAuthorizationManager;
 import io.github.jokoframework.security.controller.SecurityConstants;
@@ -15,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -78,14 +78,15 @@ public class JokoWebSecurityConfig {
                     .requestMatchers(ApiPaths.SESSIONS).hasAnyAuthority(SecurityConstants.AUTHORIZATION_REFRESH)
                     .requestMatchers(ApiPaths.SESSIONS + "/").hasAnyAuthority(SecurityConstants.AUTHORIZATION_REFRESH)
                     //qrcode
-                    .requestMatchers("/qrcode").permitAll()
+                    .requestMatchers("/qrcode").permitAll();
 
-
-                    // Todo el resto queda por default denegado
-                    .requestMatchers("/**").denyAll();
 
             // Configuracion de URL particular para la aplicacion
             if (jokoAuthorizationManager != null) jokoAuthorizationManager.configure(auth);
+
+            // el resto queda por default denegado
+            auth.requestMatchers("/**").denyAll();
+
         });
 
         http.addFilterBefore(new JokoSecurityFilter(tokenService, jokoAuthorizationManager), UsernamePasswordAuthenticationFilter.class);

@@ -212,7 +212,7 @@ public class SecurityUtils {
     }
 
     public static JokoJWTClaims parseToken(String token, String base64EncodedKeyBytes) {
-        Jws<Claims> parser = Jwts.parser().setSigningKey(base64EncodedKeyBytes).parseClaimsJws(token);
+        Jws<Claims> parser = Jwts.parser().setSigningKey(base64EncodedKeyBytes).build().parseSignedClaims(token);
 
         // parsing de la cabecera de todos los atributos standard
         Claims body = parser.getBody();

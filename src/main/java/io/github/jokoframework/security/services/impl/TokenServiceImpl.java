@@ -1,25 +1,5 @@
 package io.github.jokoframework.security.services.impl;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-
-import jakarta.annotation.PostConstruct;
-
-import io.github.jokoframework.security.util.TwoFactorAuthUtil;
-import io.github.jokoframework.security.entities.SeedEntity;
-import io.github.jokoframework.security.repositories.ISeedRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.Assert;
-
 import io.github.jokoframework.common.JokoUtils;
 import io.github.jokoframework.common.dto.JokoTokenInfoResponse;
 import io.github.jokoframework.common.errors.JokoApplicationException;
@@ -30,20 +10,39 @@ import io.github.jokoframework.security.JokoTokenWrapper;
 import io.github.jokoframework.security.controller.SecurityConstants;
 import io.github.jokoframework.security.entities.KeyChainEntity;
 import io.github.jokoframework.security.entities.SecurityProfile;
+import io.github.jokoframework.security.entities.SeedEntity;
 import io.github.jokoframework.security.entities.TokenEntity;
 import io.github.jokoframework.security.errors.JokoUnauthenticatedException;
 import io.github.jokoframework.security.errors.JokoUnauthorizedException;
 import io.github.jokoframework.security.repositories.IKeychainRepository;
+import io.github.jokoframework.security.repositories.ISeedRepository;
 import io.github.jokoframework.security.repositories.ITokenRepository;
 import io.github.jokoframework.security.services.ISecurityProfileService;
 import io.github.jokoframework.security.services.ITokenService;
 import io.github.jokoframework.security.services.TokenUtils;
 import io.github.jokoframework.security.util.SecurityUtils;
 import io.github.jokoframework.security.util.TXUUIDGenerator;
+import io.github.jokoframework.security.util.TwoFactorAuthUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.impl.DefaultClaimsBuilder;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -55,7 +54,7 @@ public class TokenServiceImpl implements ITokenService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenServiceImpl.class);
 
-    private TwoFactorAuthUtil twoFactorAuthUtil = new TwoFactorAuthUtil();
+    private final TwoFactorAuthUtil twoFactorAuthUtil = new TwoFactorAuthUtil();
 
     @Autowired
     private ISecurityProfileService appService;
@@ -305,16 +304,22 @@ public class TokenServiceImpl implements ITokenService {
 
         JokoJWTExtension jokoExtension = new JokoJWTExtension(type, roles, securityProfile);
 
-        JokoJWTClaims claims = new JokoJWTClaims();
-        claims.setJoko(jokoExtension);
+        JokoJWTClaims claims = new JokoJWTClaims(
+                // TODO evaluar de utilizar el issuer .iss()
+                new DefaultClaimsBuilder()
+                        .subject(user)
+                        .expiration(exp)
+                        .issuedAt(now)
+                        .id(uuid)
+                        .add("joko", jokoExtension)
+                        .build(),
+                jokoExtension
+        );
 
-        // TODO evaluar de utilizar el issuer .iss()
-        claims.setSubject(user).setExpiration(exp).setIssuedAt(now).setId(uuid);
 
         // Es clave setear primero todas las propiedades y luego los custom de
         // joko. Si el orden es inverso se borra el claim custom (con el
         // setClaims)
-        builder.setClaims(claims);
         builder.claim("joko", claims.getJoko());
 
         // Obtiene el secreto para firmarlo
@@ -422,10 +427,9 @@ public class TokenServiceImpl implements ITokenService {
 
         // Crea uno nuevo con los mismos permisos que el anterior
 
-        JokoTokenWrapper tokenWrapper = createAndStoreRefreshToken(jokoToken.getSubject(),
+        return createAndStoreRefreshToken(jokoToken.getSubject(),
                 jokoToken.getJoko().getProfile(), TOKEN_TYPE.REFRESH, userAgent, remoteIP,
                 jokoToken.getJoko().getRoles(), null);
-        return tokenWrapper;
     }
 
 	@Override
@@ -435,13 +439,12 @@ public class TokenServiceImpl implements ITokenService {
 			JokoJWTClaims claims =  this
 					.tokenInfoAsClaims(accessToken)
 					.orElseThrow(() -> new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_REVOKED_TOKEN));
-			JokoTokenInfoResponse response = new JokoTokenInfoResponse.Builder()
-					.audience(claims.getAudience())
-			        .userId(claims.getSubject())
-			        .expiresIn(secondsFromNow(claims.getExpiration()))
-			        .success(Boolean.TRUE)
-			        .build();
-			return response;
+            return new JokoTokenInfoResponse.Builder()
+                    .audience(Optional.ofNullable(claims.getAudience()).flatMap(a -> a.stream().findFirst()).orElse(null))
+                    .userId(claims.getSubject())
+                    .expiresIn(secondsFromNow(claims.getExpiration()))
+                    .success(Boolean.TRUE)
+                    .build();
 		} catch (ExpiredJwtException ex) {
 			LOGGER.error(ex.getMessage(), ex);
 			throw new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_EXPIRED_TOKEN);
@@ -450,8 +453,7 @@ public class TokenServiceImpl implements ITokenService {
 	
 	private Long secondsFromNow(Date expiration) {
 		Date now = new Date();
-		long seconds = (expiration.getTime() - now.getTime()) / 1000;
-		return seconds;
+        return (expiration.getTime() - now.getTime()) / 1000;
 	}
 
 	@Override

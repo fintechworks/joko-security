@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +26,11 @@ import java.util.List;
 @RestController
 public class AuditSessionController {
 
-    @Autowired
-    private IAuditSessionService auditSessionService;
+    private final IAuditSessionService auditSessionService;
+
+    public AuditSessionController(IAuditSessionService auditSessionService) {
+        this.auditSessionService = auditSessionService;
+    }
 
     @Operation(summary = "Obtiene la lista de sesiones.", description = "Obtiene la lista de sesiones ordenados por fecha de ingreso en orden descendente.")
     @ApiResponse(responseCode = "200", description = "")
