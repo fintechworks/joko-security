@@ -1,27 +1,26 @@
 package io.github.jokoframework.security.api;
 
-import java.util.Collection;
-
+import io.github.jokoframework.security.JokoJWTClaims;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.core.GrantedAuthority;
 
-import io.github.jokoframework.security.JokoJWTClaims;
+import java.util.Collection;
 
+/**
+ * Esta clase sigue las particularidades de HttpSecurity, y solamente que ya se incluyen
+ * configuraciones por default y solamente debería de enfocarse en las
+ * particularidades de los URL del sitio a definir.
+ */
 public interface JokoAuthorizationManager {
 
     /**
-     * Este metodo sigue los mismos principios que un
-     * {@link WebSecurityConfigurerAdapter}, solamente que ya se incluyen
-     * configuraciones por default y solamente debería de enfocarse en las
-     * particularidades de los URL del sitio a definir.
-     * Se mantiene la forma de Spring que hace un throws de Exception genérico.
-     * #SonarQubeIssueAware
-     * 
-     * @param http
-     * @throws Exception
+     * Configura la seguridad y permisos por endpoint
+     *
+     * @see HttpSecurity#authorizeHttpRequests(Customizer)
      */
-    void configure(HttpSecurity http) throws Exception;
+    void configure(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry http);
 
     /**
      * <p>
@@ -33,13 +32,12 @@ public interface JokoAuthorizationManager {
      * La lista de autorizaciones estará precargada de acuerdo a las reglas de
      * autorizaciones por defecto de Joko-security.
      * </p>
-     * 
-     * @param claims
-     * @param authorization
-     *            La lista de autorizationes concedidas por default a usuarios
-     *            con este tipo de tokens. Esta debería de ser la base para la
-     *            lista a retornar
-     * @return
+     *
+     * @param claims el token
+     * @param authorization La lista de autorizaciones concedidas por default a usuarios
+     *                      con este tipo de tokens. Esta debería de ser la base para la
+     *                      lista a retornar
+     * @return la lista actualizada de autorizaciones concedidas, nunca null.
      */
     Collection<? extends GrantedAuthority> authorize(JokoJWTClaims claims,
                                                      Collection<? extends GrantedAuthority> authorization);
