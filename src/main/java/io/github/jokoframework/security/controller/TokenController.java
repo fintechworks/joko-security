@@ -64,7 +64,7 @@ public class TokenController {
 
     }
 
-    @RequestMapping(value = ApiPaths.TOKEN_INFO, method = RequestMethod.GET)
+    @GetMapping(value = ApiPaths.TOKEN_INFO)
     public ResponseEntity<JokoTokenInfoResponse> tokenInfo(@RequestParam("accessToken") String accessToken) {
         JokoTokenInfoResponse response = tokenService.tokenInfo(accessToken);
         return new ResponseEntity<>(response, HttpStatus.OK);

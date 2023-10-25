@@ -69,7 +69,6 @@ public class TokenServiceImpl implements ITokenService {
     private ISeedRepository seedRepository;
 
 
-
     private TXUUIDGenerator tokenGenerator;
 
     private String secret;
@@ -108,14 +107,10 @@ public class TokenServiceImpl implements ITokenService {
     }
 
     public void initSecretFromBD() {
-    	Optional<KeyChainEntity> optionalSecretEntity = securityRepository.findById(KeyChainEntity.JOKO_TOKEN_SECRET);
-    	KeyChainEntity secretEntity;
-        if (optionalSecretEntity.isPresent()) {
-        	secretEntity = optionalSecretEntity.get();
-        } else {
-        	secretEntity = null;
-        }
-        
+        Optional<KeyChainEntity> optionalSecretEntity = securityRepository.findById(KeyChainEntity.JOKO_TOKEN_SECRET);
+        KeyChainEntity secretEntity;
+        secretEntity = optionalSecretEntity.orElse(null);
+
         if (secretEntity != null && secretEntity.getId() != null) {
             LOGGER.info("Re-using secret stored");
             this.secret = secretEntity.getValue();
@@ -149,21 +144,20 @@ public class TokenServiceImpl implements ITokenService {
                     profileKey);
             timeOut = SecurityConstants.DEFAULT_MAX_NUMBER_DEVICES_PER_APP_TYPE_FOR_USER;
 
-            LOGGER.warn("Using default {} sec for a refresh token asked by ", timeOut, JokoUtils.formatLogString(user));
+            LOGGER.warn("Using default {} sec for a refresh token asked by {}", timeOut, JokoUtils.formatLogString(user));
             LOGGER.warn("If you want to specify a timeout please check {} ", SecurityProfile.TABLE_NAME);
         }
 
         // Un refresh token es siempre revocable
         JokoTokenWrapper token = createToken(user, roles, tokenType, timeOut, profileKey);
         storeToken(token, securityProfile, userAgent, remoteIP);
-        String seedEntity = seedRepository.findOneByUserId(user).toString();
-        if(seed != null && seedEntity == "Optional.empty") {
+        Optional<SeedEntity> seedEntity = seedRepository.findOneByUserId(user);
+        if (seedEntity.isEmpty()) {
             storeSeed(seed, user);
             return token;
-        }else if(seed == null){
+        } else if (seed == null) {
             return token;
-        }
-        else{
+        } else {
             throw new JokoUnauthenticatedException(JokoUnauthenticatedException.DEFAULT_ERROR_MSG);
         }
     }
@@ -176,7 +170,7 @@ public class TokenServiceImpl implements ITokenService {
      * @param otp
      * @return
      */
-    public JokoTokenWrapper createAccessToken(JokoJWTClaims refreshToken, String otp) throws GeneralSecurityException{
+    public JokoTokenWrapper createAccessToken(JokoJWTClaims refreshToken, String otp) throws GeneralSecurityException {
         if (!hasBeenRevoked(refreshToken.getId())) {
             // Solo si el token de refresh esta activo produce token.
             // En este punto el token ya fue controlado por los filtros
@@ -195,21 +189,20 @@ public class TokenServiceImpl implements ITokenService {
                     timeOut, jokoClaims.getProfile());
             TokenEntity entity = tokenRepository.getTokenById(refreshToken.getId());
             String userId = entity.getUserId();
-            Optional<SeedEntity> check= seedRepository.findOneByUserId(userId);
+            Optional<SeedEntity> check = seedRepository.findOneByUserId(userId);
             SeedEntity seed;
-            if(check.isPresent()) {
+            if (check.isPresent()) {
                 seed = seedRepository.findOneByUserId(userId).orElseThrow(() -> new JokoUnauthenticatedException(JokoUnauthenticatedException.DEFAULT_ERROR_MSG));
-            }
-            else{
+            } else {
                 return token;
             }
             String secret = seed.getSeedSecret();
             String number;
 
             number = twoFactorAuthUtil.generateCurrentNumber(secret);
-            if(number.equalsIgnoreCase(otp)) {
+            if (number.equalsIgnoreCase(otp)) {
                 return token;
-            }else {
+            } else {
                 throw new JokoApplicationException("The OTP doesnt match with the given number");
             }
 
@@ -279,9 +272,9 @@ public class TokenServiceImpl implements ITokenService {
      * @param user    El usuario dueño del token
      * @param roles   La lista de roles que se le concederá al usuario para este
      *                token en particular
-     * @param type
-     * @param timeout
-     * @return
+     * @param type    the token type
+     * @param timeout the ttl of the token
+     * @return        the created token, never null
      */
     public JokoTokenWrapper createToken(String user, List<String> roles, TOKEN_TYPE type, int timeout,
                                         String securityProfile) {
@@ -317,15 +310,19 @@ public class TokenServiceImpl implements ITokenService {
         );
 
 
-        // Es clave setear primero todas las propiedades y luego los custom de
-        // joko. Si el orden es inverso se borra el claim custom (con el
-        // setClaims)
-        builder.claim("joko", claims.getJoko());
+//        // Es clave setear primero todas las propiedades y luego los custom de
+//        // joko. Si el orden es inverso se borra el claim custom (con el
+//        // setClaims)
+//        builder.claim("joko", claims.getJoko());
 
         // Obtiene el secreto para firmarlo
+        System.out.println(getSecret());
         builder.signWith(SignatureAlgorithm.HS512, getSecret());
 
         String token = builder.compact();
+
+        JokoJWTClaims parsed = parse(token);
+
         return new JokoTokenWrapper(claims, token);
     }
 
@@ -349,15 +346,16 @@ public class TokenServiceImpl implements ITokenService {
 
         if (userAgent != null && userAgent.length() > TokenEntity.MAX_USER_AGENT_LENGTH) {
             userAgent = userAgent.substring(0, TokenEntity.MAX_USER_AGENT_LENGTH);
-            LOGGER.warn("While generating token " + JokoUtils.formatLogString(entity.getId())
-                    + "... The user-agent was longer than maximum expected (" + TokenEntity.MAX_USER_AGENT_LENGTH
-                    + "), it was truncated to avoid DB overflow. ");
+            LOGGER.warn("While generating token '{}'... The user-agent was longer than maximum expected ({}), it was truncated to avoid DB overflow. ",
+                    JokoUtils.formatLogString(entity.getId()),
+                    TokenEntity.MAX_USER_AGENT_LENGTH);
         }
         if (remoteIP != null && remoteIP.length() > TokenEntity.MAX_IP_LENTH) {
             remoteIP = remoteIP.substring(0, TokenEntity.MAX_IP_LENTH);
-            LOGGER.warn("While generating token " + JokoUtils.formatLogString(entity.getId())
-                    + "... The remoteIP was longer than maximum expected (" + TokenEntity.MAX_IP_LENTH
-                    + "), it was truncated to avoid DB overflow. ");
+            LOGGER.warn("While generating token {} ... The remoteIP was longer than maximum expected ({}), it was truncated to avoid DB overflow. ",
+                    JokoUtils.formatLogString(entity.getId()),
+                    TokenEntity.MAX_IP_LENTH
+            );
         }
         entity.setUserAgent(userAgent);
         entity.setRemoteIP(remoteIP);
@@ -365,7 +363,7 @@ public class TokenServiceImpl implements ITokenService {
         tokenRepository.save(entity);
     }
 
-    private void storeSeed(String seed, String userId){
+    private void storeSeed(String seed, String userId) {
         SeedEntity seedEntity = new SeedEntity();
         seedEntity.setSeedSecret(seed);
         seedEntity.setUserId(userId);
@@ -376,14 +374,10 @@ public class TokenServiceImpl implements ITokenService {
     @Override
     public boolean hasBeenRevoked(String jti) {
         LOGGER.trace("Verifying if token was revoked: {}", jti);
-    	TokenEntity token = tokenRepository.getTokenById(jti);
-        if (token == null) {
-            // Si el token no está en la BD entonces se asume que fue revocado
-            // (o
-            // expiro el tiempo)
-            return true;
-        }
-        return false;
+        TokenEntity token = tokenRepository.getTokenById(jti);
+        // Si el token no está en la BD entonces se asume que fue revocado
+        // (o expiro el tiempo)
+        return token == null;
     }
 
     @Override
@@ -394,7 +388,7 @@ public class TokenServiceImpl implements ITokenService {
 
     @Override
     public void revokeTokensUntil(Date date) {
-    	tokenRepository.deleteTokensFromDate(date);
+        tokenRepository.deleteTokensFromDate(date);
     }
 
     @Override
@@ -432,44 +426,44 @@ public class TokenServiceImpl implements ITokenService {
                 jokoToken.getJoko().getRoles(), null);
     }
 
-	@Override
-	public JokoTokenInfoResponse tokenInfo(String accessToken) {
-		Assert.notNull(accessToken, "El token es requerido");
-		try {
-			JokoJWTClaims claims =  this
-					.tokenInfoAsClaims(accessToken)
-					.orElseThrow(() -> new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_REVOKED_TOKEN));
+    @Override
+    public JokoTokenInfoResponse tokenInfo(String accessToken) {
+        Assert.notNull(accessToken, "El token es requerido");
+        try {
+            JokoJWTClaims claims = this
+                    .tokenInfoAsClaims(accessToken)
+                    .orElseThrow(() -> new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_REVOKED_TOKEN));
             return new JokoTokenInfoResponse.Builder()
                     .audience(Optional.ofNullable(claims.getAudience()).flatMap(a -> a.stream().findFirst()).orElse(null))
                     .userId(claims.getSubject())
                     .expiresIn(secondsFromNow(claims.getExpiration()))
                     .success(Boolean.TRUE)
                     .build();
-		} catch (ExpiredJwtException ex) {
-			LOGGER.error(ex.getMessage(), ex);
-			throw new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_EXPIRED_TOKEN);
-		}
-	}
-	
-	private Long secondsFromNow(Date expiration) {
-		Date now = new Date();
+        } catch (ExpiredJwtException ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw new JokoUnauthenticatedException(JokoUnauthenticatedException.ERROR_EXPIRED_TOKEN);
+        }
+    }
+
+    private Long secondsFromNow(Date expiration) {
+        Date now = new Date();
         return (expiration.getTime() - now.getTime()) / 1000;
-	}
+    }
 
-	@Override
-	public Optional<JokoJWTClaims> tokenInfoAsClaims(String token) {
-		JokoJWTClaims claims = this.parse(token);
-		// En este punto el token ya es valido sino habria tirado una
-		// excepcion JwtException
-		JokoJWTExtension jokoClaims = claims.getJoko();
-		if (jokoClaims.getType().equals(JokoJWTExtension.TOKEN_TYPE.REFRESH)) {
-		    // Solamente los tokens de refresh se pueden revocar
-		    if (this.hasBeenRevoked(claims.getId())) {
-		        return Optional.empty();
-		    }
-		}
+    @Override
+    public Optional<JokoJWTClaims> tokenInfoAsClaims(String token) {
+        JokoJWTClaims claims = this.parse(token);
+        // En este punto el token ya es valido sino habria tirado una
+        // excepcion JwtException
+        JokoJWTExtension jokoClaims = claims.getJoko();
+        if (jokoClaims.getType().equals(JokoJWTExtension.TOKEN_TYPE.REFRESH)) {
+            // Solamente los tokens de refresh se pueden revocar
+            if (this.hasBeenRevoked(claims.getId())) {
+                return Optional.empty();
+            }
+        }
 
-		return Optional.of(new JokoJWTClaims(claims, jokoClaims));
-	}
+        return Optional.of(new JokoJWTClaims(claims, jokoClaims));
+    }
 
 }

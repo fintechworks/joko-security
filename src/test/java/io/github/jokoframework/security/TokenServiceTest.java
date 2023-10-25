@@ -1,22 +1,10 @@
 package io.github.jokoframework.security;
 
-import static io.github.jokoframework.security.SecurityTestConstants.EXPIRATION_SECURITY_PROFILE;
-import static io.github.jokoframework.security.SecurityTestConstants.REMOTE_IP;
-import static io.github.jokoframework.security.SecurityTestConstants.ROLES;
-import static io.github.jokoframework.security.SecurityTestConstants.SECURITY_PROFILE;
-import static io.github.jokoframework.security.SecurityTestConstants.USER;
-import static io.github.jokoframework.security.SecurityTestConstants.USER_AGENT;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.security.GeneralSecurityException;
-import java.util.Date;
-
+import io.github.jokoframework.common.dto.JokoTokenInfoResponse;
+import io.github.jokoframework.security.JokoJWTExtension.TOKEN_TYPE;
+import io.github.jokoframework.security.errors.JokoUnauthenticatedException;
+import io.github.jokoframework.security.services.ITokenService;
+import io.jsonwebtoken.SignatureException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,11 +15,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.github.jokoframework.common.dto.JokoTokenInfoResponse;
-import io.github.jokoframework.security.JokoJWTExtension.TOKEN_TYPE;
-import io.github.jokoframework.security.errors.JokoUnauthenticatedException;
-import io.github.jokoframework.security.services.ITokenService;
-import io.jsonwebtoken.SignatureException;
+import java.security.GeneralSecurityException;
+import java.util.Date;
+
+import static io.github.jokoframework.security.SecurityTestConstants.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.*;
 
 
 
@@ -48,8 +39,7 @@ import io.jsonwebtoken.SignatureException;
 @Transactional
 public class TokenServiceTest {
 
-    private static final long ACCEPTED_DATE_DELTA = 1000;// 1 segundo de
-    // diferencia
+    private static final long ACCEPTED_DATE_DELTA = 1000;// 1 segundo de diferencia
 
     @Autowired
     private ITokenService tokenService;
@@ -154,7 +144,7 @@ public class TokenServiceTest {
     	} catch(Throwable e) {
     		assertThat(e, instanceOf(JokoUnauthenticatedException.class));
     		JokoUnauthenticatedException je = (JokoUnauthenticatedException) e;
-    		assertEquals(je.getErrorCode(), JokoUnauthenticatedException.ERROR_REVOKED_TOKEN);
+    		assertEquals(JokoUnauthenticatedException.ERROR_REVOKED_TOKEN, je.getErrorCode());
     	}
     	
     }
@@ -169,7 +159,7 @@ public class TokenServiceTest {
     	} catch (RuntimeException e) {
     		assertThat(e, instanceOf(JokoUnauthenticatedException.class));
     		JokoUnauthenticatedException je = (JokoUnauthenticatedException) e;
-    		assertEquals(je.getErrorCode(), JokoUnauthenticatedException.ERROR_EXPIRED_TOKEN);
+    		assertEquals(JokoUnauthenticatedException.ERROR_EXPIRED_TOKEN, je.getErrorCode());
     	}
     }
     

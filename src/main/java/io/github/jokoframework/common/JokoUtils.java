@@ -101,7 +101,7 @@ public class JokoUtils {
      * @return la lista de DTOs generados.
      */
     @SuppressWarnings("unchecked")
-	public static <T> List<T> fromEntityToDTO(List<? extends DTOConvertable> entities) {
+    public static <T> List<T> fromEntityToDTO(List<? extends DTOConvertable> entities) {
         List<T> list = new ArrayList<>();
 
         List<DTOConvertable> l = (List<DTOConvertable>) entities;
@@ -144,8 +144,7 @@ public class JokoUtils {
     public static String generateRandomString(int length) {
         BytesKeyGenerator consumerIdGenerator = KeyGenerators.secureRandom(length);
         byte[] b = consumerIdGenerator.generateKey();
-        String s = Base64.encodeBase64URLSafeString(b);
-        return s;
+        return Base64.encodeBase64String(b);
     }
 
     /**
